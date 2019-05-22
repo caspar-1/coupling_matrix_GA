@@ -1,10 +1,11 @@
 import numpy as np
 import random
 import copy
+from abc import ABC, abstractmethod
 
-
-class GENE_POOL():
-    def __init__(self,pool_sz):
+class GENE_POOL(ABC):
+    def __init__(self,**kwargs):
+        pool_sz = kwargs.get("pool_sz",100)
         self.pool_sz=pool_sz
         self.pool=[None]*pool_sz
         self.fitest=None
@@ -18,7 +19,7 @@ class GENE_POOL():
         for idx in range(self.pool_sz):
             gene_a=random.choice(self.pool)
             gene_b=random.choice(self.pool)
-            child=gene_a.breed(gene_b)
+            child=gene_a.breed(mating_chromzone=gene_b)
             new_population[idx]=child
         fittest_parents = self.pool[0:keep_top_n]
         new_children = new_population[keep_top_n:]
@@ -48,17 +49,19 @@ class GENE_POOL():
 
 
 
-class GENE(object):
+class GENE(ABC):
     sz=0
     mutate_thr=0
     cross_thr=0
 
-    def __init__(self):
-        self.gene=((np.random.rand(self.sz)*2)-1)
+    def __init__(self,**kwargs):
+        self.gene= ((np.random.rand(self.sz)*2)-1)
+        self.last_mutation = np.zeros(self.sz)
         self.fitness=None
        
 
-    def breed(self,dna):
+    def breed(self,**kwargs):
+        mating_chromzone=kwargs.get("mating_chromzone")
         rr=np.random.rand(self.sz)
         r1 = np.where(rr>self.mutate_thr,True,False)
         r2 = np.where(rr<self.cross_thr,True,False)
@@ -66,15 +69,11 @@ class GENE(object):
         debug=["-"]*self.sz
         for _idx in range(self.sz):
             if r1[_idx]:
-                rn= (((np.random.rand(1)*2.0)-1.0))
-                weight=child.gene[_idx]
-                weight_n= weight + (rn/200.0) #random mutate
-                child.gene[_idx]=weight_n
                 debug[_idx]="M"
+                child.gene[_idx]=self.mutate(child.gene[_idx])
             if r2[_idx]:
-                #child.gene[_idx]=child.gene[_idx] + (((np.random.rand(1)*2.0)-1.0)) #random mutate
-                child.gene[_idx]=dna.gene[_idx] #crossbread
                 debug[_idx]="X"
+                child.gene[_idx] = self.crossover(child.gene[_idx],_idx,mating_chromzone)
 
         
         print(''.join(debug))
@@ -86,6 +85,16 @@ class GENE(object):
         fitness=0.0
         return fitness
 
+    @abstractmethod
+    def mutate(self,gene_idx):
+        """override this"""
+        pass
+        
+
+    @abstractmethod
+    def crossover(self,gene,gene_idx,mating_chromzone,**kwargs):
+        """override this"""
+        pass
 
 
 class TEST_GENE(GENE):

@@ -76,6 +76,15 @@ class CM_GENE(ga.GENE):
     sz=28
     mutate_thr=0.9
     cross_thr=0.05
+    sparse=np.array([
+        [1,1,1,1,1,1,0],
+        [1,1,1,0,0,1,1],
+        [1,1,1,0,0,1,1],
+        [1,0,0,1,1,0,1],
+        [1,0,0,1,1,0,1],
+        [1,1,1,0,0,1,1],
+        [0,1,1,1,1,1,1],
+    ])
 
     def get_cm(self):
         sz=7
@@ -93,9 +102,9 @@ class CM_GENE(ga.GENE):
         d=d=np.identity(sz)*m
         cm=(u+u.T+d)
         np.set_printoptions(precision=3)
-        #print(f)
+        cm_sparse = CM_GENE.sparse*cm
 
-        return cm
+        return cm_sparse
 
     def check(self):
         """overide this"""
@@ -109,6 +118,18 @@ class CM_GENE(ga.GENE):
         #self.fitness=np.absolute(err_s11)
         #self.fitness=np.absolute(err_s21)
         return self.fitness
+
+
+    def mutate(self,gene):
+        rn= (((np.random.rand(1)*2.0)-1.0))
+        gene = gene + (rn/200.0) #random mutate
+        return gene
+       
+        
+
+    def crossover(self,gene,gene_idx,mating_chromzone,**kwargs):
+        new_gene=mating_chromzone.gene[gene_idx] #crossbread
+        return new_gene
 
 
 def generate_target():
@@ -134,7 +155,7 @@ if __name__=="__main__":
     target_S11 = 20 * np.log10(abs(target_S11_raw))
     target_S21 = 20 * np.log10(abs(target_S21_raw))
 
-    _pool = ga.GENE_POOL(100)
+    _pool = ga.GENE_POOL(pool_sz=100)
     _pool.initiliase_pool(CM_GENE)
     for x in range(3000):
         # if x==50:
