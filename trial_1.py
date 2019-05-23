@@ -4,9 +4,9 @@ import ga
 import matplotlib.pyplot as plt
 
 
-points=40
-min_w=-2
-max_w=2
+points=64
+min_w=-3
+max_w=3
 
 
 class PLOTTER():
@@ -23,7 +23,7 @@ class PLOTTER():
     
     def do_plot(self,w,S11,S21,dB=True) :
         
-        def convert(data,lim=-40):
+        def convert(data,lim=-80):
             _plt = 20 * np.log10(abs(data))
             _plt = cm_tools.cutoff(_plt, lim)
             return _plt
@@ -86,6 +86,10 @@ class CM_GENE(ga.GENE):
         [0,1,1,1,1,1,1],
     ])
 
+    def __init__(self):
+        super(CM_GENE, self).__init__()
+        
+
     def get_cm(self):
         sz=7
         col_st=0
@@ -112,22 +116,31 @@ class CM_GENE(ga.GENE):
         w, S11, S21 = cm_tools.MN_to_Sparam(f, Rs=1, Rl=1, w_min=min_w, w_max=max_w, w_num=points, dB=True,dB_limit=-200, plot=False)
         S11=20 * np.log10(abs(S11))
         S21=20 * np.log10(abs(S21))
-        err_s21 = dist(target_S21,S21)*200.0
+        err_s21 = dist(target_S21,S21)
         err_s11 = dist(target_S11,S11)
-        self.fitness=np.absolute(err_s21) + np.absolute(err_s11)
+        #self.fitness=np.absolute(err_s21) + np.absolute(err_s11)
         #self.fitness=np.absolute(err_s11)
-        #self.fitness=np.absolute(err_s21)
+        self.fitness=np.absolute(err_s21)        
         return self.fitness
 
 
-    def mutate(self,gene):
-        rn= (((np.random.rand(1)*2.0)-1.0))
-        gene = gene + (rn/200.0) #random mutate
+    def mutate(self,gene_idx):
+        mutaion_scaler = (self.fitness/CM_GENE.scaler)
+        rm= (((np.random.rand(1)*2.0)-1.0))* mutaion_scaler
+        
+        if(self.last_mutation[gene_idx]==0.0):
+            gene = self.gene[gene_idx] + rm #random mutate
+            self.last_mutation[gene_idx]=rm
+            self.mutation_thr_mod[gene_idx]=1.0
+        else:
+            gene = self.gene[gene_idx]+ self.last_mutation[gene_idx]
+            self.mutation_thr_mod[gene_idx]=self.mutation_thr_mod[gene_idx]*0.9
         return gene
        
         
 
-    def crossover(self,gene,gene_idx,mating_chromzone,**kwargs):
+    def crossover(self,gene_idx,mating_chromzone,**kwargs):
+        self.last_mutation[gene_idx]=0.0
         new_gene=mating_chromzone.gene[gene_idx] #crossbread
         return new_gene
 
@@ -155,7 +168,7 @@ if __name__=="__main__":
     target_S11 = 20 * np.log10(abs(target_S11_raw))
     target_S21 = 20 * np.log10(abs(target_S21_raw))
 
-    _pool = ga.GENE_POOL(pool_sz=100)
+    _pool = ga.GENE_POOL(pool_sz=50)
     _pool.initiliase_pool(CM_GENE)
     for x in range(3000):
         # if x==50:
@@ -178,12 +191,13 @@ if __name__=="__main__":
         #     _plotter.reset()
         
         _pool.cull(10)
-        _pool.breed(keep_top_n=2)
+        _pool.breed(keep_top_n=3)
         if x%5==0:
             best=_pool.fitest[0]
             top_cm=best.get_cm()
             target_w,meas_S11, meas_S21=cm_tools.MN_to_Sparam(top_cm, Rs=1, Rl=1, w_min=min_w, w_max=max_w, w_num=points, dB=True,dB_limit=-200, plot=False)
             _plotter.do_plot(target_w,meas_S11, meas_S21)
+            print(top_cm)
 
 
     input("press key")

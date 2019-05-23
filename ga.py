@@ -22,6 +22,11 @@ class GENE_POOL(ABC):
             child=gene_a.breed(mating_chromzone=gene_b)
             new_population[idx]=child
         fittest_parents = self.pool[0:keep_top_n]
+
+        for x in fittest_parents:
+            x.last_mutation = np.zeros(x.sz)
+            x.mutation_thr_mod = np.ones(x.sz)
+
         new_children = new_population[keep_top_n:]
         self.pool = None
         self.pool =  fittest_parents + new_children
@@ -53,30 +58,33 @@ class GENE(ABC):
     sz=0
     mutate_thr=0
     cross_thr=0
+    scaler=400
 
     def __init__(self,**kwargs):
-        self.gene= ((np.random.rand(self.sz)*2)-1)
+        self.gene= ((np.random.rand(self.sz)*0.1)-0.05)
+        
         self.last_mutation = np.zeros(self.sz)
+        self.mutation_thr_mod = np.ones(self.sz)
         self.fitness=None
        
 
     def breed(self,**kwargs):
         mating_chromzone=kwargs.get("mating_chromzone")
         rr=np.random.rand(self.sz)
-        r1 = np.where(rr>self.mutate_thr,True,False)
+        r1 = np.where(rr>(self.mutate_thr*self.mutation_thr_mod),True,False)
         r2 = np.where(rr<self.cross_thr,True,False)
         child=copy.deepcopy(self)
         debug=["-"]*self.sz
         for _idx in range(self.sz):
             if r1[_idx]:
                 debug[_idx]="M"
-                child.gene[_idx]=self.mutate(child.gene[_idx])
+                child.gene[_idx]=self.mutate(_idx)
             if r2[_idx]:
                 debug[_idx]="X"
-                child.gene[_idx] = self.crossover(child.gene[_idx],_idx,mating_chromzone)
+                child.gene[_idx] = self.crossover(_idx,mating_chromzone)
 
         
-        print(''.join(debug))
+        #print("{0} <{1}>".format(''.join(debug),self.fitness))
 
         return child
 
@@ -92,7 +100,7 @@ class GENE(ABC):
         
 
     @abstractmethod
-    def crossover(self,gene,gene_idx,mating_chromzone,**kwargs):
+    def crossover(self,gene_idx,mating_chromzone,**kwargs):
         """override this"""
         pass
 
@@ -127,7 +135,7 @@ class TEST_GENE(GENE):
 
 
 if __name__=="__main__":
-    _pool = GENE_POOL(100)
+    _pool = GENE_POOL(pool_sz=100)
     _pool.initiliase_pool(TEST_GENE)
     _pool.cull(10)
     _pool.breed()
